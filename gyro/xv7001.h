@@ -16,6 +16,11 @@ HAL_StatusTypeDef xv7001_read_temperature(void);               // 读取温度（默认
 extern int16_t g_TempRaw;                                      // 温度裸数据（12位二补码，已符号扩展）
 extern float   g_TempC;                                        // 温度（摄氏度）
 
+HAL_StatusTypeDef xv7001_read_angular_rate24(void);            // 读取角速度（24位二补码）
+extern int32_t g_GyroRaw24;                                    // 角速度裸数据（24位二补码，已符号扩展到32位）
+extern int32_t g_GyroZeroOffset;                               // 启动零偏（平均100次得到）
+extern int32_t g_GyroRawCalibrated;                            // 零偏校准后的角速度裸数据
+
 #ifdef __cplusplus
 }
 #endif

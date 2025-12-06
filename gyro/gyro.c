@@ -60,9 +60,20 @@ static void Temp_Thread(void const *argument)
     // 上电后需要等待≥1ms再进行SPI通信，确保设备就绪
     osDelay(2);                        // 简单等待2ms
     
+    // 初始零偏校准：1秒内采集100次角速度原始值（10ms间隔），计算平均作为零偏
+    int64_t sum = 0;                   // 累计和
+    for (int i = 0; i < 100; ++i)      // 采样100次
+    { // 累积角速度原始值
+        xv7001_read_angular_rate24();  // 读取角速度原始值
+        sum += g_GyroRaw24;            // 累加
+        osDelay(10);                   // 10ms间隔
+    }
+    g_GyroZeroOffset = (int32_t)(sum / 100); // 计算平均作为零偏
+    
     for (;;)                           // 无限循环
-    { // 读取温度并延时
+    { // 周期读取温度与角速度
         xv7001_read_temperature();     // 读取温度，更新g_TempRaw与g_TempC
+        xv7001_read_angular_rate24();  // 读取角速度并更新校准值
         osDelay(100);                  // 100ms周期
     }
 }

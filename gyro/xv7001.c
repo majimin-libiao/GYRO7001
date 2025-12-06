@@ -8,6 +8,9 @@ static inline void CS_High(void) { HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PI
 static SPI_HandleTypeDef hspi2; // SPI2句柄（保持静态）
 int16_t g_TempRaw = 0;          // 温度裸数据（12位）
 float   g_TempC = 0.0f;         // 温度摄氏度
+int32_t g_GyroRaw24 = 0;        // 角速度裸数据（24位）
+int32_t g_GyroZeroOffset = 0;   // 零偏（启动后通过平均获得）
+int32_t g_GyroRawCalibrated = 0;// 零偏校准后的角速度裸数据
 
 void xv7001_init(void)
 { // 初始化SPI2与PB12片选
@@ -53,8 +56,35 @@ void xv7001_init(void)
         while (1) { }                            // 卡死等待
     }
 
+} // xv7001_init结束
 
+HAL_StatusTypeDef xv7001_read_angular_rate24(void)
+{ // 读取角速度（24位）：连续读取3字节，二补码格式
+    uint8_t addr = 0x80 | 0x0A;                // 读地址：MSB=1，寄存器0x0A
+    uint8_t buf[3] = {0, 0, 0};                // 接收缓冲
+    uint8_t dummy = 0xFF;                      // 占位发送
+    HAL_StatusTypeDef st;                      // 状态
+
+    CS_Low();                                  // 片选拉低
+    st = HAL_SPI_Transmit(&hspi2, &addr, 1, 10); // 发送地址
+    if (st == HAL_OK)
+        st = HAL_SPI_TransmitReceive(&hspi2, &dummy, &buf[0], 1, 10); // 读第1字节（高字节）
+    if (st == HAL_OK)
+        st = HAL_SPI_TransmitReceive(&hspi2, &dummy, &buf[1], 1, 10); // 读第2字节（中字节）
+    if (st == HAL_OK)
+        st = HAL_SPI_TransmitReceive(&hspi2, &dummy, &buf[2], 1, 10); // 读第3字节（低字节）
+    CS_High();                                 // 片选拉高
+
+    if (st != HAL_OK)                          // 失败直接返回
+        return st;
+
+    int32_t val = ((int32_t)buf[0] << 16) | ((int32_t)buf[1] << 8) | (int32_t)buf[2]; // 组装24位
+    if (val & 0x800000) val |= 0xFF000000;     // 符号扩展到32位
+    g_GyroRaw24 = val;                         // 保存裸数据
+    g_GyroRawCalibrated = g_GyroRaw24 - g_GyroZeroOffset; // 校准零偏后的数据
+    return HAL_OK;                              // 成功
 }
+
 HAL_StatusTypeDef xv7001_read_temperature(void)
 {
 	// 读取温度（12位模式）：两个字节，组装为12位二补码并转换为摄氏度
