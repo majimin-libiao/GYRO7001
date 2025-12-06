@@ -11,6 +11,8 @@ float   g_TempC = 0.0f;         // 温度摄氏度
 int32_t g_GyroRaw24 = 0;        // 角速度裸数据（24位）
 int32_t g_GyroZeroOffset = 0;   // 零偏（启动后通过平均获得）
 int32_t g_GyroRawCalibrated = 0;// 零偏校准后的角速度裸数据
+float   g_AngleDeg = 0.0f;       // 时间积分角度（度）
+static float s_gyroScale = 17920.0f; // 原始值→度/秒换算系数（24位模式默认71680 LSB/(°/s)）
 
 void xv7001_init(void)
 { // 初始化SPI2与PB12片选
@@ -55,8 +57,18 @@ void xv7001_init(void)
     { // 初始化失败处理
         while (1) { }                            // 卡死等待
     }
-
 } // xv7001_init结束
+
+void xv7001_set_gyro_scale(float scale)
+{ // 设置角速度换算系数（原始数值→度/秒）
+    s_gyroScale = scale;                  // 保存系数
+}
+
+float xv7001_get_gyro_dps(void)
+{ // 获取校准后角速度的度/秒数值
+    return ((float)g_GyroRawCalibrated) / s_gyroScale; // 原始→度/秒
+}
+
 
 HAL_StatusTypeDef xv7001_read_angular_rate24(void)
 { // 读取角速度（24位）：连续读取3字节，二补码格式

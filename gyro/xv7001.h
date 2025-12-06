@@ -20,6 +20,9 @@ HAL_StatusTypeDef xv7001_read_angular_rate24(void);            // 读取角速度（24
 extern int32_t g_GyroRaw24;                                    // 角速度裸数据（24位二补码，已符号扩展到32位）
 extern int32_t g_GyroZeroOffset;                               // 启动零偏（平均100次得到）
 extern int32_t g_GyroRawCalibrated;                            // 零偏校准后的角速度裸数据
+extern float   g_AngleDeg;                                      // 对时间积分得到的角度（度）
+void xv7001_set_gyro_scale(float scale);                        // 设置角速度单位换算系数（原始数值→度/秒）
+float xv7001_get_gyro_dps(void);                                // 获取当前校准后角速度（度/秒）
 
 #ifdef __cplusplus
 }
