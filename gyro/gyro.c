@@ -74,15 +74,22 @@ static void Temp_Thread(void const *argument)
     { // 周期读取温度与角速度
         xv7001_read_temperature();     // 读取温度，更新g_TempRaw与g_TempC
         xv7001_read_angular_rate24();  // 读取角速度并更新校准值
+        
         // 角速度积分：将校准后的原始值转换为度/秒并积分得到角度
         const float dt = 0.1f;         // 时间步长（100ms，对应任务周期）
-        const float deadband = 0.5f;   // 死区（度/秒），抑制微小噪声积分漂移
+        const float deadband = 0.05f;  // 死区（度/秒），抑制微小噪声积分漂移
         float rate_dps = xv7001_get_gyro_dps(); // 校准后角速度（度/秒），已按比例换算
-        if (rate_dps > -deadband && rate_dps < deadband)    // 应用死区
-            rate_dps = 0.0f;            // 小于死区不积分
-        g_AngleDeg += rate_dps * dt;    // 积分更新角度
-        // 漏泄抗漂移：角度轻微向0收敛，长期减小累积误差
-        g_AngleDeg *= 0.999f;           // 轻微衰减
+        
+        // 仅当角速度超出死区时才积分，避免静止时噪声累积
+        if (rate_dps > deadband || rate_dps < -deadband)
+        { // 超出死区才积分
+            g_AngleDeg += rate_dps * dt; // 积分更新角度
+            // 角度限制到[-180, 180]
+            if (g_AngleDeg > 180.0f)       g_AngleDeg -= 360.0f; // 超上限折返
+            else if (g_AngleDeg < -180.0f) g_AngleDeg += 360.0f; // 超下限折返
+        }
+        // 静止时（死区内）不积分，角度保持不变
+        
         osDelay(100);                    // 100ms周期
     }
 }
