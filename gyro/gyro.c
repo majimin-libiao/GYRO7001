@@ -10,11 +10,13 @@
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 osThreadId LEDThread1Handle, LEDThread2Handle;
+osThreadId TempThreadHandle;                    // 温度读取任务句柄
 
 /* Private function prototypes -----------------------------------------------*/
 static void LED_Thread1(void const *argument);
 static void LED_Thread2(void const *argument);
 static void SystemClock_Config(void);           // 时钟配置：外部8MHz，系统时钟64MHz
+static void Temp_Thread(void const *argument);  // 温度读取任务
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -38,15 +40,31 @@ int main(void)
     osThreadDef(LED1, LED_Thread1, osPriorityNormal, 0, configMINIMAL_STACK_SIZE); // 线程1定义
   
     osThreadDef(LED2, LED_Thread2, osPriorityNormal, 0, configMINIMAL_STACK_SIZE); // 线程2定义
+    osThreadDef(TEMP, Temp_Thread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE); // 温度任务定义
   
     LEDThread1Handle = osThreadCreate(osThread(LED1), NULL); // 启动线程1
   
     LEDThread2Handle = osThreadCreate(osThread(LED2), NULL); // 启动线程2
+    TempThreadHandle = osThreadCreate(osThread(TEMP), NULL); // 启动温度读取任务
   
     osKernelStart();                   // 启动调度器
 
     for (;;)                            // 调度器接管后不应执行到此
         ;
+}
+
+static void Temp_Thread(void const *argument)
+{ // 温度读取任务：周期调用xv7001_read_temperature更新全局变量
+    (void) argument;                   // 未使用的参数
+    
+    // 上电后需要等待≥1ms再进行SPI通信，确保设备就绪
+    osDelay(2);                        // 简单等待2ms
+    
+    for (;;)                           // 无限循环
+    { // 读取温度并延时
+        xv7001_read_temperature();     // 读取温度，更新g_TempRaw与g_TempC
+        osDelay(100);                  // 100ms周期
+    }
 }
 
 void SysTick_Handler(void)
