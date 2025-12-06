@@ -58,6 +58,8 @@
   <ItemGroup>
     <ClCompile Include="gyro.c" />
     <ClCompile Include="system_stm32f1xx.c" />
+    <ClCompile Include="xv7001.c" />
+    <ClInclude Include="xv7001.h" />
     <None Include="copilot-instructions.md" />
     <None Include="gyro\copilot-instructions.md" />
     <None Include="stm32.props" />
@@ -250,5 +252,6 @@
     <None Include="gyro-Debug.vgdbsettings" />
     <None Include="gyro-Release.vgdbsettings" />
     <None Include="stm32.xml" />
+    <None Include="xv7001.md" />
   </ItemGroup>
 </Project>
